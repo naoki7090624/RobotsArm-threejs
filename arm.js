@@ -3,20 +3,15 @@ import * as THREE from '../threejs-dev/build/three.module.js';
 import { OrbitControls } from '../threejs-dev/examples/jsm/controls/OrbitControls.js';
 
 function main() {
-  const scene = new THREE.Scene();
-  const renderer = new THREE.WebGLRenderer();
+  const canvas = document.querySelector("#canvas");
+  const renderer = new THREE.WebGLRenderer({canvas});
+  renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize( window.innerWidth, window.innerHeight );
-  document.body.appendChild( renderer.domElement );
-  
-  // Renderer
-  renderer.autoClear = false;// For multi screens
-  // CameraA
-  let camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-  camera.position.set(0, 5, 50);
-  camera.lookAt(new THREE.Vector3(0, 0, 0));
-  scene.add(camera);
-  const controls = new OrbitControls(camera, renderer.domElement);
-
+  const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
+  camera.position.set(8, 40, 60);
+  camera.lookAt(new THREE.Vector3(8, -2, 2));
+  //const controls = new OrbitControls(camera, canvas);
+  const scene = new THREE.Scene();
 
 	// Robots arm
   var HandMaterial = new THREE.MeshStandardMaterial({color: 0xFFFFEE});
@@ -44,8 +39,8 @@ function main() {
 	scene.add(jointMesh1)
 	jointMesh1.rotation.set(0,0,0);
 	jointMesh2.rotation.set(0,0,0);
-	//midMesh.rotation.set(Math.PI/2,0,Math.PI/2);
 
+  // floor
   {
   const geometry = new THREE.PlaneGeometry(40,40);
   const material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
@@ -54,6 +49,7 @@ function main() {
   plane.position.set(12,-2,10);
   scene.add( plane );
   }
+  // hole
   {
     const geometry = new THREE.RingGeometry( 2, 5, 32 );
     const material = new THREE.MeshBasicMaterial( { color: 0x000000, side: THREE.DoubleSide } );
@@ -63,121 +59,99 @@ function main() {
     scene.add( mesh );
   }
   
-
-  
-  const material = new THREE.MeshBasicMaterial({color: 0xFF0000});
-  var geometry = new THREE.SphereGeometry(2,32,32);
-  const point = [];
-  var spheres = [];
-  var ballnum = 5;
-  
-  for (var i = 0; i < ballnum; i++){
-    var x = Math.floor(Math.random()*10.0);
-    var z = Math.floor(Math.random()*10.0);
-    if (x >= 0){
-      x = x + 5;
-    }
-    if (z >= 0){
-      z = z + 5;
-    }
+  // balls
+  {
+    const material = new THREE.MeshBasicMaterial({color: 0xFF0000});
+    const geometry = new THREE.SphereGeometry(1,32,32);
+    var point = [];
+    var spheres = [];
+    const ballnum = 10;
     
-    const sphere = new THREE.Mesh(geometry, material);
-    sphere.position.set(x,0,z);
-    spheres.push(sphere);
-    point.push( new THREE.Vector3(x,0,z) );
-    scene.add(spheres[i]);
+    for (var i = 0; i < ballnum; i++){
+      var x = Math.floor(Math.random()*20.0);
+      var z = Math.floor(Math.random()*20.0);
+      if (x <= 5){
+        x = x + 5;
+      }
+      if (z <= 5){
+        z = z + 5;
+      }
+      
+      const sphere = new THREE.Mesh(geometry, material);
+      sphere.position.set(x,0,z);
+      sphere.name = 'sphere' + String(i);
+      spheres.push(sphere);
+      point.push( new THREE.Vector3(x,0,z) );
+      scene.add(spheres[i]);
+    }
+  }
+
+  // light
+  {
+    const directionalLight = new THREE.DirectionalLight(0xffffff);
+    directionalLight.position.set(1, 1, 1);
+    scene.add(directionalLight);
   }
 
 
-  //const geometry = new THREE.BoxGeometry(5);
-  //const material = new THREE.MeshStandardMaterial({color: 0xff0000});
-  //const box = new THREE.Mesh(geometry, material);
-  //scene.add(box);
-
-  const directionalLight = new THREE.DirectionalLight(0xffffff);
-  directionalLight.position.set(1, 1, 1);
-  scene.add(directionalLight);
-
-  var flag1 = false;
-  var flag2 = false;
-  var flag3 = false;
-  var flag4 = false;
-  var flag5 = false;
-  var flag6 = false;
+  // Flag to check if the angle change is finished to get the ball.
+  var flag1 = true;
+  var flag2 = true;
+  var flag3 = true;
+  // Flag to check if the angle change is finished to come back to the holl.
+  var flag4 = true;
+  var flag5 = true;
+  var flag6 = true;
 
   document.addEventListener( 'mousedown', clickPosition, false );
-  console.log(point)
-  var [theta, theta1, theta2] = BallPosition();
-  var [Htheta, Htheta1, Htheta2] = HollPosition();
-  var angles = [];
-  console.log(spheres);
-  var idx = ballnum-1; //残りのボールの数をカウントしている
+  var idx = 0; // Ball id which user selects
+  var [theta, theta1, theta2] = [0,0,0]; // Angle of robot's joint
+  var BallIds = []; // Buffer to save the ball which is picked up
   tick();
   
+  // If user click the ball, the ball will be pickup next time
   function clickPosition( event ) {
-    // 画面上のマウスクリック位置
-    const element = event.currentTarget;
-    const x = event.clientX - element.offsetLeft;
-    const y = event.clientY - element.offsetTop;
-    //var x = event.clientX;
-    //var y = event.clientY;
-     
-    // マウスクリック位置を正規化
-    const w = element.offsetWidth;
-    const h = element.offsetHeight;
+    var x = event.clientX;
+    var y = event.clientY;
     var mouse = new THREE.Vector2();
-    mouse.x = ( x / w ) * 2 - 1;
-    mouse.y = -( y / h ) * 2 + 1;
-    // mouse.x =  ( x / window.innerWidth ) * 2 - 1;
-    // mouse.y = -( y / window.innerHeight ) * 2 + 1;
-     
-    // Raycasterインスタンス作成
+    mouse.x =  ( x / window.innerWidth ) * 2 - 1;
+    mouse.y = -( y / window.innerHeight ) * 2 + 1;
     var raycaster = new THREE.Raycaster();
-    // 取得したX、Y座標でrayの位置を更新
     raycaster.setFromCamera( mouse, camera );
-    // オブジェクトの取得
     var intersects = raycaster.intersectObjects( scene.children );
-     
-    // cube1がクリックされたらcube1を消してcube2を表示
-    console.log("test");
-    angles.push(1);
-    console.log(spheres);
+    console.log(intersects);
+    if(intersects[0].object.name.match(/sphere/)){
+      BallIds.push(Number(intersects[0].object.name.slice(-1))); //get id of sphere
+    }
   }
 
   function tick() {
-    //requestAnimationFrame(tick);
-    // raycaster.setFromCamera(mouse, camera);
-    // const intersects = raycaster.intersectObjects(scene.children);
-    // //console.log(intersects)
-    // if(intersects[0].object.name === 'spheres'){
-    //   console.log("test")
-    // }
-    if (flag1==false || flag2==false || flag3==false){
-      MoveToBall();
-    }
-    else{
-      spheres[idx].position.set(0,0,0);
-      jointMesh3.add(spheres[idx]);
-      MoveToHoll();
-    }
     if (flag4==true && flag5==true && flag6==true){
-      jointMesh3.remove(spheres[idx]);
-      if(angles.length){
-        idx=idx-1;
+        jointMesh3.remove(spheres[idx]);
+      if(BallIds.length){
+        idx = BallIds.pop();
         [theta, theta1, theta2] = BallPosition();
         [flag1,flag2,flag3]=[false,false,false];
         [flag4,flag5,flag6]=[false,false,false];
-        angles.pop();
       }
-      //[flag1,flag2,flag3]=[false,false,false]
-      //[flag4,flag5,flag6]=[false,false,false]
+    }
+    else{
+      if (flag1==false || flag2==false || flag3==false){
+        MoveToBall();
+      }
+      else{
+        spheres[idx].position.set(0,0,0);
+        jointMesh3.add(spheres[idx]);
+        MoveToHoll();
+      }
     }
     renderer.render(scene, camera);
     requestAnimationFrame(tick);
   }
 
-  function BallPosition(){//calculate angles to pick up the boll
-    const point_xz = point.pop();
+  //calculate angles to pick up the boll
+  function BallPosition(){
+    const point_xz = point[idx];
     console.log(point_xz);
     const b = 12;
     const c = 12;
@@ -188,16 +162,7 @@ function main() {
     return [theta,theta1,theta2];
   }
 
-  function HollPosition(){//calculate angles to go to the hole
-    var b = 12;
-    var c = 12;
-    var Euclidean = 20;
-    var Htheta = 0 //direction to the ball
-    var Htheta1 = Math.acos((c**2+Euclidean-b**2)/(2*c*Math.sqrt(Euclidean)));
-    var Htheta2 = Math.acos((b**2+c**2-Euclidean)/(2*b*c));
-    return [Htheta,Htheta1,Htheta2];
-  }
-
+  //change angles to pick up the boll
   function MoveToBall(){
     if (jointMesh1.rotation.y>=-theta){
       jointMesh1.rotation.y -= 0.01; //-theta;
@@ -219,6 +184,7 @@ function main() {
     }
   }
 
+  // change angles to come back to the holl
   function MoveToHoll(){
     if (jointMesh1.rotation.y<=0){
       jointMesh1.rotation.y += 0.01; //-theta;
