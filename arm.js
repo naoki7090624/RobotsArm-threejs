@@ -14,9 +14,9 @@ function main() {
   const scene = new THREE.Scene();
 
 	// Robots arm
-  var HandMaterial = new THREE.MeshStandardMaterial({color: 0xFFFFEE});
-  var HandGeometry1 = new THREE.BoxGeometry(8,3,3);
-	var HandGeometry2 = new THREE.BoxGeometry(8,3,3);
+  var HandMaterial = new THREE.MeshStandardMaterial({color: 0xf0e68c});
+  var HandGeometry1 = new THREE.BoxGeometry(8,2,2);
+	var HandGeometry2 = new THREE.BoxGeometry(8,2,2);
   var HandMesh1 = new THREE.Mesh(HandGeometry1 ,HandMaterial );
 	var HandMesh2 = new THREE.Mesh(HandGeometry2 ,HandMaterial );
 
@@ -26,27 +26,35 @@ function main() {
   var jointMesh1 = new THREE.Mesh(jointGeometry ,jointMaterial );
   var jointMesh2 = new THREE.Mesh(jointGeometry ,jointMaterial );
 	var jointMesh3 = new THREE.Mesh(jointGeometry2 ,jointMaterial );
+  var Hand1 = new THREE.BoxGeometry(2,0.5,0.5);
+  var Hand2 = new THREE.BoxGeometry(2,0.5,0.5);
+  var Hand1Mesh = new THREE.Mesh(Hand1 ,jointMaterial );
+  var Hand2Mesh = new THREE.Mesh(Hand2 ,jointMaterial );
 
-	jointMesh1.position.set(0,0,0)
+	jointMesh1.position.set(0,0,0);
   jointMesh1.add(HandMesh1);
 	HandMesh1.position.set(6,0,0);
 	HandMesh1.add(jointMesh2);
-	jointMesh2.position.set(6,0,0)
-	jointMesh2.add(HandMesh2)
+	jointMesh2.position.set(6,0,0);
+	jointMesh2.add(HandMesh2);
 	HandMesh2.position.set(6,0,0);
-	HandMesh2.add(jointMesh3);
-	jointMesh3.position.set(6,0,0)
-	scene.add(jointMesh1)
+	//HandMesh2.add(jointMesh3);
+	//jointMesh3.position.set(6,0,0);
+  HandMesh2.add(Hand1Mesh);
+  HandMesh2.add(Hand2Mesh);
+  Hand1Mesh.position.set(5,0,1);
+  Hand2Mesh.position.set(5,0,-1);
+	scene.add(jointMesh1);
 	jointMesh1.rotation.set(0,0,0);
 	jointMesh2.rotation.set(0,0,0);
 
   // floor
   {
-  const geometry = new THREE.PlaneGeometry(40,40);
+  const geometry = new THREE.PlaneGeometry(60,40);
   const material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
   const plane = new THREE.Mesh( geometry, material );
   plane.rotation.x = Math.PI/2;
-  plane.position.set(12,-2,10);
+  plane.position.set(0,-2,0);
   scene.add( plane );
   }
   // hole
@@ -68,15 +76,20 @@ function main() {
     const ballnum = 10;
     
     for (var i = 0; i < ballnum; i++){
-      var x = Math.floor(Math.random()*20.0);
-      var z = Math.floor(Math.random()*20.0);
-      if (x <= 5){
+      var x = Math.floor(Math.random()*30.0-15.0);
+      var z = Math.floor(Math.random()*30.0-15.0);
+      if (x < 5 && x > 0){
         x = x + 5;
       }
-      if (z <= 5){
+      else if(x > -5 && x < 0){
+        x = x - 5;
+      }
+      if (z < 6 && z > 0){
         z = z + 5;
       }
-      
+      else if(z > -5 && z < 0){
+        z = z - 5;
+      }
       const sphere = new THREE.Mesh(geometry, material);
       sphere.position.set(x,0,z);
       sphere.name = 'sphere' + String(i);
@@ -105,7 +118,7 @@ function main() {
 
   document.addEventListener( 'mousedown', clickPosition, false );
   var idx = 0; // Ball id which user selects
-  var [theta, theta1, theta2] = [0,0,0]; // Angle of robot's joint
+  let [theta, theta1, theta2] = [0,0,0]; // Angle of robot's joint
   var BallIds = []; // Buffer to save the ball which is picked up
   tick();
   
@@ -127,7 +140,8 @@ function main() {
 
   function tick() {
     if (flag4==true && flag5==true && flag6==true){
-        jointMesh3.remove(spheres[idx]);
+        //jointMesh3.remove(spheres[idx]);
+        Hand2Mesh.remove(spheres[idx]);
       if(BallIds.length){
         idx = BallIds.pop();
         [theta, theta1, theta2] = BallPosition();
@@ -140,8 +154,9 @@ function main() {
         MoveToBall();
       }
       else{
-        spheres[idx].position.set(0,0,0);
-        jointMesh3.add(spheres[idx]);
+        spheres[idx].position.set(0.5,0,1);
+        //jointMesh3.add(spheres[idx]);
+        Hand2Mesh.add(spheres[idx]);
         MoveToHoll();
       }
     }
@@ -156,19 +171,39 @@ function main() {
     const b = 12;
     const c = 12;
     const Euclidean = Math.pow(point_xz.x,2) + Math.pow(point_xz.z,2);
-    const theta = Math.acos(point_xz.x/Math.sqrt(Euclidean)); //direction to the ball
+    //const theta = Math.acos(point_xz.x/Math.sqrt(Euclidean)); //direction to the ball
+    const X = point_xz.x - 0;
+    const Z = point_xz.z - 0;
+    let theta = Math.atan(Z/X);
     const theta1 = Math.acos((c**2+Euclidean-b**2)/(2*c*Math.sqrt(Euclidean)));
     const theta2 = Math.acos((b**2+c**2-Euclidean)/(2*b*c));
+    if(X<0 && theta>0){
+      theta = -(Math.PI-theta);
+    }
+    else if(X<0 && theta<0){
+      theta = Math.PI+theta;
+    }
+    console.log(theta);
     return [theta,theta1,theta2];
   }
 
   //change angles to pick up the boll
   function MoveToBall(){
-    if (jointMesh1.rotation.y>=-theta){
-      jointMesh1.rotation.y -= 0.01; //-theta;
+    if (theta>0){
+      if (jointMesh1.rotation.y>=-theta){
+        jointMesh1.rotation.y -= 0.01; //-theta;
+      }
+      else{
+        flag1 = true;
+      }
     }
-    else{
-      flag1 = true;
+    if(theta<0){
+      if (jointMesh1.rotation.y<=-theta){
+        jointMesh1.rotation.y += 0.01; //-theta;
+      }
+      else{
+        flag1 = true;
+      }
     }
     if(jointMesh1.rotation.z<=theta1){
       jointMesh1.rotation.z += 0.01; //theta1
@@ -186,23 +221,35 @@ function main() {
 
   // change angles to come back to the holl
   function MoveToHoll(){
-    if (jointMesh1.rotation.y<=0){
-      jointMesh1.rotation.y += 0.01; //-theta;
+    if (theta>0){
+      if (jointMesh1.rotation.y<=0){
+        jointMesh1.rotation.y += 0.01; //-theta;
+      }
+      else{
+        flag4 = true;
+      }
     }
-    else{
-      flag4 = true;
+    else if (theta<0){
+      if (jointMesh1.rotation.y>=0){
+        jointMesh1.rotation.y -= 0.01; //-theta;
+      }
+      else{
+        flag4 = true;
+      }
     }
-    if(jointMesh1.rotation.z>=0){
-      jointMesh1.rotation.z -= 0.01; //theta1
-    }
-    else{
-      flag5 = true;
-    }
-    if(jointMesh2.rotation.z<=0){
-      jointMesh2.rotation.z +=0.02; //theta2+Math.PI
-    }
-    else{
-      flag6 = true;
+    if (flag4){
+      if(jointMesh1.rotation.z>=0){
+        jointMesh1.rotation.z -= 0.01; //theta1
+      }
+      else{
+        flag5 = true;
+      }
+      if(jointMesh2.rotation.z<=0){
+        jointMesh2.rotation.z +=0.02; //theta2+Math.PI
+      }
+      else{
+        flag6 = true;
+      }
     }
   }
 
