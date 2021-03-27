@@ -1,17 +1,27 @@
 //window.addEventListener('load', init);
 import * as THREE from '../threejs-dev/build/three.module.js';
 import { OrbitControls } from '../threejs-dev/examples/jsm/controls/OrbitControls.js';
+import { VRButton } from '../threejs-dev/examples/jsm/webxr/VRButton.js';
 
 function main() {
   const canvas = document.querySelector("#canvas");
   const renderer = new THREE.WebGLRenderer({canvas});
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize( window.innerWidth, window.innerHeight );
-  const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
-  camera.position.set(8, 40, 60);
-  camera.lookAt(new THREE.Vector3(8, -2, 2));
-  //const controls = new OrbitControls(camera, canvas);
   const scene = new THREE.Scene();
+  //document.body.appendChild( VRButton.createButton( renderer ) );
+  //renderer.xr.enabled = true;
+  const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
+  
+  camera.lookAt(new THREE.Vector3(8, -2, 2));
+  const controls = new OrbitControls(camera, canvas);
+  camera.position.set(0, 40, 60);
+  controls.update();
+ 
+  
+  // WebVR
+  //const container = document.getElementById('container');
+  //canvas.appendChild(WEBVR.createButton(renderer));
 
 	// Robots arm
   var HandMaterial = new THREE.MeshStandardMaterial({color: 0xf0e68c});
@@ -73,7 +83,7 @@ function main() {
     const geometry = new THREE.SphereGeometry(1,32,32);
     var point = [];
     var spheres = [];
-    const ballnum = 10;
+    const ballnum = 20;
     
     for (var i = 0; i < ballnum; i++){
       var x = Math.floor(Math.random()*30.0-15.0);
@@ -116,11 +126,14 @@ function main() {
   var flag5 = true;
   var flag6 = true;
 
-  document.addEventListener( 'mousedown', clickPosition, false );
+  //document.addEventListener( 'mousedown', clickPosition, false );
+  document.addEventListener( 'click', clickPosition );
   var idx = 0; // Ball id which user selects
   let [theta, theta1, theta2] = [0,0,0]; // Angle of robot's joint
   var BallIds = []; // Buffer to save the ball which is picked up
+  //renderer.setAnimationLoop(tick);
   tick();
+  //renderer.setAnimationLoop( tick );
   
   // If user click the ball, the ball will be pickup next time
   function clickPosition( event ) {
