@@ -1,7 +1,7 @@
 //window.addEventListener('load', init);
-import * as THREE from '../threejs-dev/build/three.module.js';
-import { OrbitControls } from '../threejs-dev/examples/jsm/controls/OrbitControls.js';
-import { VRButton } from '../threejs-dev/examples/jsm/webxr/VRButton.js';
+import * as THREE from '../../threejs-dev/build/three.module.js';
+import { OrbitControls } from '../../threejs-dev/examples/jsm/controls/OrbitControls.js';
+//import { VRButton } from '../threejs-dev/examples/jsm/webxr/VRButton.js';
 
 function main() {
   const canvas = document.querySelector("#canvas");
@@ -84,6 +84,7 @@ function main() {
     var point = [];
     var spheres = [];
     const ballnum = 20;
+    var ballname = "";
     
     for (var i = 0; i < ballnum; i++){
       var x = Math.floor(Math.random()*30.0-15.0);
@@ -102,7 +103,14 @@ function main() {
       }
       const sphere = new THREE.Mesh(geometry, material);
       sphere.position.set(x,0,z);
-      sphere.name = 'sphere' + String(i);
+      if (i<10){
+        ballname = 'sphere0' + String(i);
+      }
+      else{
+        ballname = 'sphere' + String(i);
+      }
+      console.log(ballname);
+      sphere.name =  ballname;
       spheres.push(sphere);
       point.push( new THREE.Vector3(x,0,z) );
       scene.add(spheres[i]);
@@ -147,7 +155,7 @@ function main() {
     var intersects = raycaster.intersectObjects( scene.children );
     console.log(intersects);
     if(intersects[0].object.name.match(/sphere/)){
-      BallIds.push(Number(intersects[0].object.name.slice(-1))); //get id of sphere
+      BallIds.push(Number(intersects[0].object.name.substr(-2,2))); //get id of sphere
     }
   }
 
